@@ -22,7 +22,7 @@
 *		   in the front of them and read the LCD display.
 
 *		   The range is about 6-10 inches and can be increased by
-*		   reducing the resister R11's value, but it should not be
+*		   reducing the resister R11s value, but it should not be
 *		   smaller than 100 Ohm. 
 *     
 portd:		equ	8
@@ -116,7 +116,7 @@ BCDcount:
 		decb			; Decrement b
 		bne     BCDcount
 BCDdone:
-		pula			; Pull the bufers so we don't screw other things up
+		pula			; Pull the bufers so we dont screw other things up
 		pulb
 		pulx
 		rts
