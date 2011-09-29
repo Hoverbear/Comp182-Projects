@@ -33,18 +33,18 @@ TEN_MS:		equ	2500		; 2500 x 8 cycles = 20,000 cycles = 10ms
 STACK:		equ	$FF
 *
               	org     $0800		; EVBplus2 board I/O routines
-rs485_recv:     rmb     3		; enables rs485 recv mode
-rs485_xmit:     rmb     3		; enables rs485 xmit mode
-get_date:       rmb     3		; gets current date from PTC
-get_time:       rmb     3		; gets current time from PC
-outstrg00:	rmb	3		; outputs a string terminated by 0 
-lcd_ini:	rmb	3		; initializes the 16x2 LCD module
-lcd_line1:	rmb	3		; displays 16 char on the first line
-lcd_line2:	rmb	3		; displays 16 char on the second line
-sel_inst:	rmb	3		; selects instruction before writing LCD module 
-sel_data:	rmb	3		; selects data before writing the LCD module
-wrt_pulse:	rmb	3		; generates a write pulse to the LCD module
-bcd:            rmb     1       	; reserves a byte for bcd
+rs485_recv:     rmb     3		; Enables rs485 recv mode
+rs485_xmit:     rmb     3		; Enables rs485 xmit mode
+get_date:       rmb     3		; Gets current date from PTC
+get_time:       rmb     3		; Gets current time from PC
+outstrg00:	rmb	3		; Outputs a string terminated by 0 
+lcd_ini:	rmb	3		; Initializes the 16x2 LCD module
+lcd_line1:	rmb	3		; Displays 16 char on the first line
+lcd_line2:	rmb	3		; Displays 16 char on the second line
+sel_inst:	rmb	3		; Selects instruction before writing LCD module 
+sel_data:	rmb	3		; Selects data before writing the LCD module
+wrt_pulse:	rmb	3		; Generates a write pulse to the LCD module
+bcd:            rmb     1       	; Reserves a byte for bcd
 *
 *
 		org	$F000
@@ -61,31 +61,31 @@ del1:		dex			; 3 cycles, decrement register x
 *
 start:
      		lds	#STACK
-   		jsr	delay_10ms	; delay 20ms during power up
+   		jsr	delay_10ms	; Delay 20ms during power up
     		jsr	delay_10ms
 		ldx	#REGBLK
 		ldaa	#2
 		staa	ddrd,x		; PD0=input, PD1=output
 	
-		clr	portd,x		; make PD1=0 to xmit IR light
+		clr	portd,x		; Make PD1=0 to xmit IR light
 
-    		jsr	lcd_ini		; initialize the LCD 
+    		jsr	lcd_ini		; Initialize the LCD 
                       	
 back:		ldaa	portd+$1000
-		rora			; rotate PD0 into carry bit
-		bcs	no_IR_light     ; branch if carry set
+		rora			; Rotate PD0 into carry bit
+		bcs	no_IR_light     ; Branch if carry set
 		inc     bcd
-		ldx    	#MSG2		; MSG2 for line2, x points to MSG2
-        	ldab    #16             ; send out 16 characters
-     		jsr	lcd_line1
+		ldx    	#MSG2		; MSG2 for line1, x points to MSG2
+        	ldab    #16             ; Send out 16 characters
+     		jsr	lcd_line1	; Print MSG2 to LCD line 1
      	
-     		ldx     #MSG3+8         ; sets buffer after count
+     		ldx     #MSG3+8         ; Sets buffer after count
      		ldaa    bcd
 		adda	#$30            ;
      		staa    0,x
-     		ldx    	#MSG3		; MSG2 for line2, x points to MSG2
-        	ldab    #16             ; send out 16 characters
-     		jsr	lcd_line2
+     		ldx    	#MSG3		; MSG3 for line2, x points to MSG3
+        	ldab    #16             ; Send out 16 characters
+     		jsr	lcd_line2	; Print MSG3 to LCD line 2
      	
      		jsr	delay_10ms
      		jsr	delay_10ms
@@ -101,22 +101,22 @@ no_IR_light:
      		jmp	back
 
 BCDinc:
-		pshx                    ;push the x
+		pshx                    ; Push the buffers
 		pshb
 		psha
-		abx                     ;b added x
-		dex                     ;x is decremented 1
+		abx                     ; b added x
+		dex                     ; x is decremented 1
 BCDcount:
 		ldaa    0,x             ;
-		adda    #1
-		daa
-		staa    0,x
+		adda    #1		; Add 1 to A TODO: inca better?
+		daa			; Decimal Adjust A
+		staa    0,x		; Storing A at 0, offset by x
 		bcc     BCDdone
-		dex
-		decb
+		dex			; Decrement x
+		decb			; Decrement b
 		bne     BCDcount
 BCDdone:
-		pula
+		pula			; Pull the bufers so we don't screw other things up
 		pulb
 		pulx
 		rts
