@@ -2,6 +2,8 @@
 *  IR_sen.asm - an IR proximity sensor for the Ep2711E9 Rev. C board
 *               (c)2003, EVBplus.com, Written By Wayne Chu
 *
+*      Modified by: Andrew Hobden, Patrick Brus
+*
 *     Function:	A robot application by using the IR light beam to detect 
 *		an object in its vicinity.
 *		
