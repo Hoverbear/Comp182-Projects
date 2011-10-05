@@ -46,11 +46,11 @@ lcd_line2:	rmb	3		; Displays 16 char on the second line
 sel_inst:	rmb	3		; Selects instruction before writing LCD module
 sel_data:	rmb	3		; Selects data before writing the LCD module
 wrt_pulse:	rmb	3		; Generates a write pulse to the LCD module
-bcd:            fcb     0,0       	; Reserves 2 byte for bcd
 *
 *
 		org	$F000
 		jmp	start
+bcd:            fcb     0,0       	; Reserves 2 byte for bcd
 
 delay_10ms:
 		pshx
