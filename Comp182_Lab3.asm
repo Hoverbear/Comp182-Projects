@@ -81,12 +81,10 @@ back:		ldaa	portd+$1000
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line1	; Print MSG2 to LCD line 1
 
-
-		
-		ldx     #MSG3+16         ; Sets buffer after count
+		ldx     #MSG3+10s         ; Sets buffer after count
 		jsr     BCDinc
 		jsr     LongDelay
-		
+
      		ldaa    bcd
 		adda	#30            ;
      		staa    0,x
@@ -114,10 +112,10 @@ BCDinc:
 		abx                     ; b added x
 		dex                     ; x is decremented 1
 BCDcount:
-		ldaa    0,x             ;
+		ldaa    bcd             ;
 		adda	#1		; Add 1 to A
 		daa			; Decimal Adjust A
-		staa    0,x		; Storing A at 0, offset by x
+		staa    bcd		; Storing A at 0, offset by x
 		bcc     BCDdone
 		dex			; Decrement x
 		decb			; Decrement b
@@ -127,7 +125,7 @@ BCDdone:
 		pulb
 		pulx
 		rts
-		
+
 LongDelay:      jsr	delay_10ms
                 jsr	delay_10ms
                 jsr	delay_10ms
