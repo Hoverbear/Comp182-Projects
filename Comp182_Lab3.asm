@@ -81,12 +81,15 @@ back:		ldaa	portd+$1000
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line1	; Print MSG2 to LCD line 1
 
-		ldx     #MSG3+10s         ; Sets buffer after count
+		;ldx     #MSG3+10s         ; Sets buffer after count
 		jsr     BCDinc
-		jsr     LongDelay
+		;jsr     LongDelay
 
-     		ldaa    bcd
-		adda	#30            ;
+     		; Need to add a loop here.
+		; Need to use anda #%00001111 to get first digit.
+		; 
+		ldaa    bcd
+		adda	#$30            ;
      		staa    0,x
      		ldx    	#MSG3		; MSG3 for line2, x points to MSG3
         	ldab    #16             ; Send out 16 characters
@@ -104,7 +107,7 @@ no_IR_light:
      		jsr	delay_10ms
      		jsr	delay_10ms
      		jmp	back
-; Inputs: x = The BCD, b = ???.
+; Inputs: x = The BCD
 BCDinc:
 		pshx                    ; Push the buffers
 		pshb
