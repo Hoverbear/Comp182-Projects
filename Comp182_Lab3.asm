@@ -51,7 +51,7 @@ wrt_pulse:	rmb	3		; Generates a write pulse to the LCD module
 		org	$F000
 		jmp	start
 bcd:            fcb     0,0       	; Reserves 2 byte for bcd
-bcdlength:	equ	2		; length of bcd in bytes
+bcdlength:	equ	4		; length of bcd in bytes
 
 delay_10ms:
 		pshx
@@ -77,55 +77,72 @@ start:
 back:		ldaa	portd+$1000
 		rora			; Rotate PD0 into carry bit
 		bcs	no_IR_light     ; Branch if carry set
-
 		ldx    	#MSG2		; MSG2 for line1, x points to MSG2
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line1	; Print MSG2 to LCD line 1
-
 		ldx	#bcd		; Sets to bcd for subroutine
-		ldab	#bcdlength
-		jsr     BCDinc
-
-     		; Need to add a loop here.
-		; Need to use anda #%00001111 to get first digit etc.
-		; staa ASCIIbuff	; Stores to the ASCIIbuff
-		ldx     #ASCIIbuff
-		ldab    #4
-		jsr     InsertASCII
-		
-     		ldx    	#MSG3		; MSG3 for line2, x points to MSG3
+		jsr     BCDinc		; Increment the BCD by one digit.
+		ldx     #ASCIIbuff	; Loading position of MSG3 where numerical digits display.
+		ldab	#bcdlength	; Loading the number of BCD digits there are.
+		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
+     		ldx    	#MSG3		; MSG3 for line2, x points to MSG3	
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
-
-     		jsr     delay_10ms
-     		jmp	back
+     		jsr     delay_10ms	; Take a short break! (LongDelay exists for a longer break)
+     		jmp	back		; Reloop.
      		
-; Inputs: x = message to append to, y = the bcd buffer, b = the number of digits
-InsertASCII:    pshx
+; Inputs:
+;		x = message to append to,
+;		y = the bcd buffer,
+;		a = the number of digits
+
+ASCIIInsert:   
+		pshx			; Pushing all buffers for safety concerns.
 		pshy
 		psha
 		pshb
 		ldab    #bcdlength
-ASCIILoop:      ldaa    bcd+1
-		anda    #%11110000
-		lsra
-		lsra
-		lsra
-		lsra
-		adda    #$30
-		staa    0,x
-		ldaa    0,x
-		anda    #%11110000
-		adda    #$30
-		staa    1,x
-		decb
-		beq     ASCIILoop
-		; End loop
-		pulb
-		pula
-		puly
-		pulx
-		rts
+
+ASCIILoop:	
+		LDAA	0,y		; Loading BCD byte. (2 digits per byte)
+		ANDA	#%00001111	; Remove second digit within the bye.
+		ADDA	#$30		; Convert to ASCII.
+		STAA	0,x		; Store within first digit of display buffer.
+		LDAA	0,y		; Reload the BCD byte so we can pull the second digit of the byte.
+		LSRA			; Logicial Shifting so we can access the last 4 bytes and form a byte.		; 1st
+		LSRA			; 										; 2nd
+		LSRA			; 										; 3rd
+		LSRA			; 										; 4th
+		ADDA	#$30		; Converting the digit into ASCII code.
+		DEX			; Moving too next digit in display buffer.
+		STAA	0,x		; Writing bcd bytes.
+		DEY			; Changing BCD byte.
+		DEX			; Mark completed display buffer digit.
+		DECA			; Mark completed BCD pair, move to next byte.
+		BNE	ASCIILoop	; If A is not zero, return to begining of loop.
+ASCIIEnd:	
+		rts			; Return to subroutine.
+		
+*ASCIILoop:      ldaa    bcd+1
+*		anda    #%11110000
+*		lsra
+*		lsra
+*		lsra
+*		lsra
+*		adda    #$30
+*		staa    0,x
+*		ldaa    0,x
+*		anda    #%11110000
+*		adda    #$30
+*		staa    1,x
+*		decb
+*		beq     ASCIILoop
+*		; End loop
+*		pulb
+*		pula
+*		puly
+*		pulx
+*		rts
 
 no_IR_light:
 		ldx    	#MSG1		; MSG1 for line1, x points to MSG1
