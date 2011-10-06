@@ -51,6 +51,7 @@ wrt_pulse:	rmb	3		; Generates a write pulse to the LCD module
 		org	$F000
 		jmp	start
 bcd:            fcb     0,0       	; Reserves 2 byte for bcd
+bcdlength:	equ	2		; length of bcd in bytes
 
 delay_10ms:
 		pshx
@@ -81,13 +82,15 @@ back:		ldaa	portd+$1000
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line1	; Print MSG2 to LCD line 1
 
-		;ldx     #MSG3+10s         ; Sets buffer after count
+		ldx	#bcd		; Sets to bcd for subroutine
+		ldab	#bcdlength
 		jsr     BCDinc
-		;jsr     LongDelay
+
 
      		; Need to add a loop here.
-		; Need to use anda #%00001111 to get first digit.
-		; 
+		; Need to use anda #%00001111 to get first digit etc.
+		; staa ASCIIbuff	; Stores to the ASCIIbuff
+
 		ldaa    bcd
 		adda	#$30            ;
      		staa    0,x
@@ -95,8 +98,7 @@ back:		ldaa	portd+$1000
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
 
-     		jsr	delay_10ms
-     		jsr	delay_10ms
+     		jsr     LongDelay
      		jmp	back
 
 no_IR_light:
@@ -107,27 +109,48 @@ no_IR_light:
      		jsr	delay_10ms
      		jsr	delay_10ms
      		jmp	back
-; Inputs: x = The BCD
-BCDinc:
-		pshx                    ; Push the buffers
+; Inputs: x = BCDbuffer address, b = Length in bytes of BCDBuff
+BCDinc:		psha
+		pshx
 		pshb
-		psha
-		abx                     ; b added x
-		dex                     ; x is decremented 1
-BCDcount:
-		ldaa    bcd             ;
-		adda	#1		; Add 1 to A
-		daa			; Decimal Adjust A
-		staa    bcd		; Storing A at 0, offset by x
-		bcc     BCDdone
-		dex			; Decrement x
-		decb			; Decrement b
-		bne     BCDcount
-BCDdone:
-		pula			; Pull the bufers so we dont screw other things up
+		abx
+		dex			; Get to the BCDbuff location we want
+BCDloop:	
+		ldaa	0,x
+		inca
+		daa
+		staa	0,x		; Load, increment, decimal adjust, and restore the bcd buffer.
+		bcc	BCDfinished	; If carry is clear we can jump around extra work.
+		dex
+		decb			; Set up variables for our loop
+		bne	BCDloop
+BCDfinished:	
 		pulb
 		pulx
-		rts
+		pula
+		rts			; Clean up and return
+		
+
+*BCDinc:
+*		pshx                    ; Push the buffers
+*		pshb
+*		psha
+*		abx                     ; b added x
+*		dex                     ; x is decremented 1
+*BCDcount:
+*		ldaa    bcd             ;
+*		adda	#1		; Add 1 to A
+*		daa			; Decimal Adjust A
+*		staa    bcd		; Storing A at 0, offset by x
+*		bcc     BCDdone
+*		dex			; Decrement x
+*		decb			; Decrement b
+*		bne     BCDcount
+*BCDdone:
+*		pula			; Pull the bufers so we dont screw other things up
+*		pulb
+*		pulx
+*		rts
 
 LongDelay:      jsr	delay_10ms
                 jsr	delay_10ms
@@ -144,6 +167,7 @@ LongDelay:      jsr	delay_10ms
 MSG1:   	FCC     "NO OBJECT NEARBY"
 MSG2:   	FCC     "OBJECT DETECTED "
 MSG3:   	FCC     "Count:          "
+ASCIIbuff:	equ	#MSG2+9 ; Gets us to the desired "drop point"
        		org	$FFFE
      		fdb	start
        		end
