@@ -86,20 +86,46 @@ back:		ldaa	portd+$1000
 		ldab	#bcdlength
 		jsr     BCDinc
 
-
      		; Need to add a loop here.
 		; Need to use anda #%00001111 to get first digit etc.
 		; staa ASCIIbuff	; Stores to the ASCIIbuff
-
-		ldaa    bcd
-		adda	#$30            ;
-     		staa    0,x
+		ldx     #ASCIIbuff
+		ldab    #4
+		jsr     InsertASCII
+		
      		ldx    	#MSG3		; MSG3 for line2, x points to MSG3
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
 
-     		jsr     LongDelay
+     		jsr     delay_10ms
      		jmp	back
+     		
+; Inputs: x = message to append to, y = the bcd buffer, b = the number of digits
+InsertASCII:    pshx
+		pshy
+		psha
+		pshb
+		ldab    #bcdlength
+ASCIILoop:      ldaa    bcd+1
+		anda    #%11110000
+		lsra
+		lsra
+		lsra
+		lsra
+		adda    #$30
+		staa    0,x
+		ldaa    0,x
+		anda    #%11110000
+		adda    #$30
+		staa    1,x
+		decb
+		beq     ASCIILoop
+		; End loop
+		pulb
+		pula
+		puly
+		pulx
+		rts
 
 no_IR_light:
 		ldx    	#MSG1		; MSG1 for line1, x points to MSG1
@@ -115,7 +141,7 @@ BCDinc:		psha
 		pshb
 		abx
 		dex			; Get to the BCDbuff location we want
-BCDloop:	
+BCDloop:
 		ldaa	0,x
 		inca
 		daa
@@ -124,12 +150,12 @@ BCDloop:
 		dex
 		decb			; Set up variables for our loop
 		bne	BCDloop
-BCDfinished:	
+BCDfinished:
 		pulb
 		pulx
 		pula
 		rts			; Clean up and return
-		
+
 
 *BCDinc:
 *		pshx                    ; Push the buffers
@@ -167,7 +193,7 @@ LongDelay:      jsr	delay_10ms
 MSG1:   	FCC     "NO OBJECT NEARBY"
 MSG2:   	FCC     "OBJECT DETECTED "
 MSG3:   	FCC     "Count:          "
-ASCIIbuff:	equ	#MSG2+9 ; Gets us to the desired "drop point"
+ASCIIbuff:	equ	#MSG3+15 ; Gets us to the desired "drop point"
        		org	$FFFE
      		fdb	start
        		end
