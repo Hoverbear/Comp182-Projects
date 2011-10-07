@@ -152,7 +152,7 @@ no_IR_light:
 *		x = BCDbuffer address,
 *		b = Length in bytes of BCDBuff
 *
-BCDinc:		psha
+BCDinc:		psha			; Push and go.
 		pshx
 		pshb
 		abx			; Add the BCDBuff length to the address (End of smallest digit.)
