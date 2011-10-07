@@ -78,13 +78,16 @@ back:		ldaa	portd+$1000
 		ldx    	#MSG2		; MSG2 for line1, x points to MSG2
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line1	; Print MSG2 to LCD line 1
+*
      		ldab    #bcdlength       ; Loads the B register with 4
 		ldx	#bcd		; Sets to bcd for subroutine
 		jsr     BCDinc		; Increment the BCD by one and adjust as needed.
+*
 		ldx     #ASCIIbuff	; Loading position of MSG3 where numerical digits display.
 		ldy     #bcd            ; Loading the bcd buffer.
 		ldab	#ASCIILength	; Loading the number of BCD digits there are.
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
+*
      		ldx    	#MSG3		; MSG3 for line2, x points to MSG3
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
@@ -107,7 +110,7 @@ ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		ADDA	#$30		; Convert to ASCII.
 		STAA	0,x		; Store within first digit of display buffer.
 		LDAA	0,y		; Reload the BCD byte so we can pull the second digit of the byte.
-		LSRA			; Logicial Shifting so we can access the last 4 bytes and form a byte.		; 1st
+		LSRA			; Logical Shifting so we can access the last 4 bytes and form a byte.		; 1st
 		LSRA			; 										; 2nd
 		LSRA			; 										; 3rd
 		LSRA			; 										; 4th
