@@ -81,7 +81,7 @@ back:		ldaa	portd+$1000
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line1	; Print MSG2 to LCD line 1
 		ldx	#bcd		; Sets to bcd for subroutine
-		jsr     BCDinc		; Increment the BCD by one digit.
+		jsr     BCDinc		; Increment the BCD by one and adjust as needed.
 		ldx     #ASCIIbuff	; Loading position of MSG3 where numerical digits display.
 		ldab	#bcdlength	; Loading the number of BCD digits there are.
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
