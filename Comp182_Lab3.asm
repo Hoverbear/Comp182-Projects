@@ -62,16 +62,13 @@ del1:		dex			; 3 cycles, decrement register x
 		pulx
        		rts
 *
-start:
-     		lds	#STACK
+start:		lds	#STACK
    		jsr	delay_10ms	; Delay 20ms during power up
     		jsr	delay_10ms
 		ldx	#REGBLK
 		ldaa	#2
 		staa	ddrd,x		; PD0=input, PD1=output
-
 		clr	portd,x		; Make PD1=0 to xmit IR light
-
     		jsr	lcd_ini		; Initialize the LCD
 
 back:		ldaa	portd+$1000
@@ -91,20 +88,18 @@ back:		ldaa	portd+$1000
      		jsr     delay_10ms	; Take a short break! (LongDelay exists for a longer break)
      		jmp	back		; Reloop.
      		
-; Inputs:
-;		x = message to append to,
-;		y = the bcd buffer,
-;		a = the number of digits
-
-ASCIIInsert:   
-		pshx			; Pushing all buffers for safety concerns.
+* Inputs:
+*		x = message to append to,
+*		y = the bcd buffer,
+*		a = the number of digits
+*
+ASCIIInsert:	pshx			; Pushing all buffers for safety concerns.
 		pshy
 		psha
 		pshb
 		ldab    #bcdlength
-
-ASCIILoop:	
-		LDAA	0,y		; Loading BCD byte. (2 digits per byte)
+*
+ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		ANDA	#%00001111	; Remove second digit within the bye.
 		ADDA	#$30		; Convert to ASCII.
 		STAA	0,x		; Store within first digit of display buffer.
@@ -120,10 +115,10 @@ ASCIILoop:
 		DEX			; Mark completed display buffer digit.
 		DECA			; Mark completed BCD pair, move to next byte.
 		BNE	ASCIILoop	; If A is not zero, return to begining of loop.
-ASCIIEnd:	
-		rts			; Return to subroutine.
+*
+ASCIIEnd:	rts			; Return to subroutine.
 		
-*ASCIILoop:      ldaa    bcd+1
+*ASCIILoop:     ldaa    bcd+1
 *		anda    #%11110000
 *		lsra
 *		lsra
@@ -144,31 +139,37 @@ ASCIIEnd:
 *		pulx
 *		rts
 
+* Provided call.
 no_IR_light:
 		ldx    	#MSG1		; MSG1 for line1, x points to MSG1
        		ldab    #16             ; send out 16 characters
-    		jsr	lcd_line1
-*
-     		jsr	delay_10ms
+    		jsr	lcd_line1	; Write to display buffer.
+     		jsr	delay_10ms	; Take a break, twice!
      		jsr	delay_10ms
      		jmp	back
-; Inputs: x = BCDbuffer address, b = Length in bytes of BCDBuff
+
+* Inputs:
+*		x = BCDbuffer address,
+*		b = Length in bytes of BCDBuff
+*
 BCDinc:		psha
 		pshx
 		pshb
-		abx
-		dex			; Get to the BCDbuff location we want
-BCDloop:
-		ldaa	0,x
-		inca
-		daa
-		staa	0,x		; Load, increment, decimal adjust, and restore the bcd buffer.
-		bcc	BCDfinished	; If carry is clear we can jump around extra work.
-		dex
-		decb			; Set up variables for our loop
-		bne	BCDloop
-BCDfinished:
-		pulb
+		abx			; Add the BCDBuff length to the address (End of smallest digit.)
+		dex			; Get to the BCDbuff location we want (Right before last byte/digit-pair)
+*
+BCDloop:	ldaa	0,x		; Load the byte (2 digits) so we can work with it.
+		inca			; Increment the byte.
+		daa			; Allow the proc to adjust for us to get a proper BCD.
+		staa	0,x		; Restore the byte to it's location.
+		bcc	BCDfinished	; C=0? We're done, step to finished.
+*					; C=1? We need to move across more digits.
+		dex			; Change x to address next largest byte.
+		decb			; Reduce length by 1 so we don't overrun (We check this next step)
+		bne	BCDloop		; Z=0? Continue looping.
+*					; Z=1? We're done else we overrun.
+*
+BCDfinished:	pulb
 		pulx
 		pula
 		rts			; Clean up and return
