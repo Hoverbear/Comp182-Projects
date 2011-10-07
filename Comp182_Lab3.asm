@@ -51,7 +51,8 @@ wrt_pulse:	rmb	3		; Generates a write pulse to the LCD module
 		org	$F000
 		jmp	start
 bcd:            fcb     0,0       	; Reserves 2 byte for bcd
-bcdlength:	equ	4		; length of bcd in bytes
+bcdlength:	equ	2		; length of bcd in bytes
+ASCIILength:    equ     4               ; Length of the ASCII output
 
 delay_10ms:
 		pshx
@@ -77,21 +78,23 @@ back:		ldaa	portd+$1000
 		ldx    	#MSG2		; MSG2 for line1, x points to MSG2
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line1	; Print MSG2 to LCD line 1
+     		ldab    #bcdlength       ; Loads the B register with 4
 		ldx	#bcd		; Sets to bcd for subroutine
 		jsr     BCDinc		; Increment the BCD by one and adjust as needed.
 		ldx     #ASCIIbuff	; Loading position of MSG3 where numerical digits display.
-		ldab	#bcdlength	; Loading the number of BCD digits there are.
+		ldy     #bcd            ; Loading the bcd buffer.
+		ldab	#ASCIILength	; Loading the number of BCD digits there are.
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
-     		ldx    	#MSG3		; MSG3 for line2, x points to MSG3	
+     		ldx    	#MSG3		; MSG3 for line2, x points to MSG3
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
      		jsr     delay_10ms	; Take a short break! (LongDelay exists for a longer break)
      		jmp	back		; Reloop.
-     		
+
 * Inputs:
 *		x = message to append to,
 *		y = the bcd buffer,
-*		a = the number of digits
+*		B = the number of digits
 *
 ASCIIInsert:	pshx			; Pushing all buffers for safety concerns.
 		pshy
@@ -113,31 +116,14 @@ ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		STAA	0,x		; Writing bcd bytes.
 		DEY			; Changing BCD byte.
 		DEX			; Mark completed display buffer digit.
-		DECA			; Mark completed BCD pair, move to next byte.
-		BNE	ASCIILoop	; If A is not zero, return to begining of loop.
+		DECB			; Mark completed BCD pair, move to next byte.
+		BNE	ASCIILoop	; If B is not zero, return to begining of loop.
 *
-ASCIIEnd:	rts			; Return to subroutine.
-		
-*ASCIILoop:     ldaa    bcd+1
-*		anda    #%11110000
-*		lsra
-*		lsra
-*		lsra
-*		lsra
-*		adda    #$30
-*		staa    0,x
-*		ldaa    0,x
-*		anda    #%11110000
-*		adda    #$30
-*		staa    1,x
-*		decb
-*		beq     ASCIILoop
-*		; End loop
-*		pulb
-*		pula
-*		puly
-*		pulx
-*		rts
+ASCIIEnd:       pulb
+		pula
+		puly
+		pulx
+		rts			; Return to subroutine.
 
 * Provided call.
 no_IR_light:
@@ -162,39 +148,17 @@ BCDloop:	ldaa	0,x		; Load the byte (2 digits) so we can work with it.
 		inca			; Increment the byte.
 		daa			; Allow the proc to adjust for us to get a proper BCD.
 		staa	0,x		; Restore the byte to it's location.
-		bcc	BCDfinished	; C=0? We're done, step to finished.
+		bcc	BCDfinish	; C=0? We're done, step to finished.
 *					; C=1? We need to move across more digits.
 		dex			; Change x to address next largest byte.
 		decb			; Reduce length by 1 so we don't overrun (We check this next step)
 		bne	BCDloop		; Z=0? Continue looping.
 *					; Z=1? We're done else we overrun.
 *
-BCDfinished:	pulb
+BCDfinish:	pulb
 		pulx
 		pula
 		rts			; Clean up and return
-
-
-*BCDinc:
-*		pshx                    ; Push the buffers
-*		pshb
-*		psha
-*		abx                     ; b added x
-*		dex                     ; x is decremented 1
-*BCDcount:
-*		ldaa    bcd             ;
-*		adda	#1		; Add 1 to A
-*		daa			; Decimal Adjust A
-*		staa    bcd		; Storing A at 0, offset by x
-*		bcc     BCDdone
-*		dex			; Decrement x
-*		decb			; Decrement b
-*		bne     BCDcount
-*BCDdone:
-*		pula			; Pull the bufers so we dont screw other things up
-*		pulb
-*		pulx
-*		rts
 
 LongDelay:      jsr	delay_10ms
                 jsr	delay_10ms
