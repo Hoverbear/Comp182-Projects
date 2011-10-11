@@ -148,8 +148,8 @@ BCDinc:		psha			; Push and go.
 		dex			; Get to the BCDbuff location we want (Right before last byte/digit-pair)
 *
 BCDloop:	ldaa	0,x		; Load the byte (2 digits) so we can work with it.
-		clc			; Clear the carry bit (Inca does not clear by default)
-		inca			; Increment the byte.
+;		clc			; Clear the carry bit (Inca does not clear by default)
+		ADDA	#1		; Increment the byte.
 		daa			; Allow the proc to adjust for us to get a proper BCD.
 		staa	0,x		; Restore the byte to it's location.
 		bcc	BCDfinish	; C=0? We're done, step to finished.
