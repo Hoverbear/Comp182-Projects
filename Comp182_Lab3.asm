@@ -91,7 +91,8 @@ back:		ldaa	portd+$1000
      		ldx    	#MSG3		; MSG3 for line2, x points to MSG3
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
-     		jsr     delay_10ms	; Take a short break! (LongDelay exists for a longer break)
+     		jsr     delay_10ms	; Take a short break!
+     		jsr     delay_10ms	; Take a short break!
      		jmp	back		; Reloop.
 
 * Inputs:
@@ -103,7 +104,8 @@ ASCIIInsert:	pshx			; Pushing all buffers for safety concerns.
 		pshy
 		psha
 		pshb
-		ldab    #bcdlength
+		ldab    #bcdlength      ; Load the BCD
+		iny                     ; Get to the right byte.
 *
 ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		ANDA	#%00001111	; Remove second digit within the bye.
@@ -133,6 +135,7 @@ no_IR_light:
 		ldx    	#MSG1		; MSG1 for line1, x points to MSG1
        		ldab    #16             ; send out 16 characters
     		jsr	lcd_line1	; Write to display buffer.
+    		jsr     BCDClear        ; Clear the BCD
      		jsr	delay_10ms	; Take a break, twice!
      		jsr	delay_10ms
      		jmp	back
@@ -148,7 +151,6 @@ BCDinc:		psha			; Push and go.
 		dex			; Get to the BCDbuff location we want (Right before last byte/digit-pair)
 *
 BCDloop:	ldaa	0,x		; Load the byte (2 digits) so we can work with it.
-;		clc			; Clear the carry bit (Inca does not clear by default)
 		ADDA	#1		; Increment the byte.
 		daa			; Allow the proc to adjust for us to get a proper BCD.
 		staa	0,x		; Restore the byte to it's location.
@@ -164,17 +166,10 @@ BCDfinish:	pulb
 		pula
 		rts			; Clean up and return
 
-LongDelay:      jsr	delay_10ms
-                jsr	delay_10ms
-                jsr	delay_10ms
-                jsr	delay_10ms
-                jsr	delay_10ms
-                jsr	delay_10ms
-                jsr	delay_10ms
-                jsr	delay_10ms
-                jsr	delay_10ms
-                jsr	delay_10ms
-                rts
+BCDClear:       PSHA
+		bclr    0,BCD #$FF
+		PULA
+		RTS
 
 MSG1:   	FCC     "NO OBJECT NEARBY"
 MSG2:   	FCC     "OBJECT DETECTED "
