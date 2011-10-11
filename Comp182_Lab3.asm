@@ -111,9 +111,9 @@ ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		STAA	0,x		; Store within first digit of display buffer.
 		LDAA	0,y		; Reload the BCD byte so we can pull the second digit of the byte.
 		LSRA			; Logical Shifting so we can access the last 4 bytes and form a byte.		; 1st
-		LSRA			; 										; 2nd
-		LSRA			; 										; 3rd
-		LSRA			; 										; 4th
+		LSRA			; 									; 2nd
+		LSRA			; 									; 3rd
+		LSRA			; 									; 4th
 		ADDA	#$30		; Converting the digit into ASCII code.
 		DEX			; Moving too next digit in display buffer.
 		STAA	0,x		; Writing bcd bytes.
