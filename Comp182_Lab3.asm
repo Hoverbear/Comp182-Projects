@@ -166,10 +166,13 @@ BCDfinish:	pulb
 		pula
 		rts			; Clean up and return
 
-BCDClear:       PSHA
-		bclr    0,BCD #$FF
-		PULA
-		RTS
+BCDClear:       PSHX
+		LDX     #bcd            ; Loading the place of the BCD into X register
+		bclr    0,x     $FF     ; Clearing all the bits in the largest pair of BCD numbers
+		inx                     ; Incrementing X so we can get to the next pair
+		BCLR    0,x     $FF     ; Clearing the smallest pair of BCDs
+		PULX
+		RTS                     ; Returning home
 
 MSG1:   	FCC     "NO OBJECT NEARBY"
 MSG2:   	FCC     "OBJECT DETECTED "
