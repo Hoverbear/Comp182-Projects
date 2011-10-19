@@ -23,21 +23,13 @@ wrt_pulse:	rmb	3		; Generates a write pulse to the LCD module
 *
 		org	$F000
 		jmp	start
-bcd:            fcb     0,0,0       	; Reserves 3 byte for bcd
-bcdlength:	equ	3		; length of bcd in bytes
+secondsBCD:     fcb     0      		; Reserves 1 byte for seconds.
+minutesBCD:	fcb	0		; Reserves 1 byte for minutes.
+hoursBCD	fcb	0		; Reserves 1 byte for hours.
+unitLength:	equ	2		; length of bcd in bytes
 ASCIILength:    equ     6               ; Length of the ASCII output
 
-*
-* A simple 10 second delay for general use.
-*
-delay_10ms:
-		pshx
-		ldx     #TEN_MS		; 2500 x 8 = 20,000 cycles = 10ms
-del1:		dex			; 3 cycles, decrement register x
-		nop			; 2 cycle
-		bne	del1		; 3 cycles
-		pulx
-       		rts
+
 *
 * Starts up the program.
 *
@@ -49,11 +41,32 @@ start:		lds	#STACK
 *
 * The main program loop.
 *
-back:		
-* Do BCD Increment.
-     		ldab    #bcdlength      ; Loads the B register with 4
-		ldx	#bcd		; Sets to bcd for subroutine
-		jsr     BCDinc		; Increment the BCD by one and adjust as needed.
+back:	
+
+* Do seconds increment.
+secondINC: 	ldab    #unitLength     ; Loads the B register with the unit length (2)
+		ldx	#secondsBCD	; Sets to secondsBCD for subroutine
+		jsr     BCDinc		; Increment the seconds by one and adjust as needed.
+		ldaa	secondsBCD	; Load A with the *value* of the BCD.
+		cmpa	#$60		; Compare A to 60, checking to see if we need to inc minute.
+		beq	minuteINC	; Increment the minute if needed.
+
+* Do minutes increment, happens if secondsBCD = $60.
+minuteINC:	ldaa	#00		; Load A with 0
+		staa	secondsBCD	; Store 0 into the secondsBCD, resetting it.
+		ldab	#unitLength	; In case it got overwritten somehow. Safety first!
+		ldx	#minutesBCD	; Sets to minutesBCD for our subroutine.
+		jsr	BCDinc		; Increment the seconds by one and adjust as needed
+		ldaa	minuteBCD	; Load A with the *value* of the BCD.
+		cmpa	#$60		; Compare A to 60, checking to see if we need to inc hour.
+		beq	hourINC		; Increment the hour if needed.
+
+* Do hour increment, happens if minutesBCD = $60.
+hourINC:	ldab	#unitLength	; In case it got overwritten somehow. Safety first!
+		ldx	#hourBCD	; Sets to minutesBCD for our subroutine.
+		jsr	BCDinc		; Increment the seconds by one and adjust as needed
+					; TODO: Check for #$24, clear BCD if so.
+
 * Do ACSII display.
 		ldx     #ASCIIbuff	; Loading position of MSG3 where numerical digits display.
 		ldy     #bcd            ; Loading the bcd buffer.
@@ -115,9 +128,7 @@ BCDinc:		psha			; Push and go.
 *
 BCDloop:	ldaa	0,x		; Load the byte (2 digits) so we can work with it.
 		ADDA	#1		; Increment the byte.
-		daa			; Allow the proc to adjust for us to get a proper BCD.		
-
-
+		daa			; Allow the proc to adjust for us to get a proper BCD.
 		staa	0,x		; Restore the byte to it's location.
 		bcc	BCDfinish	; C=0? We're done, step to finished.
 *					; C=1? We need to move across more digits.
@@ -142,6 +153,18 @@ BCDClear:       PSHX
 		BCLR    0,x     $FF     ; Clearing the smallest pair of BCDs
 		PULX
 		RTS                     ; Returning home
+
+*
+* A simple 10 second delay for general use.
+*
+delay_10ms:
+		pshx
+		ldx     #TEN_MS		; 2500 x 8 = 20,000 cycles = 10ms
+del1:		dex			; 3 cycles, decrement register x
+		nop			; 2 cycle
+		bne	del1		; 3 cycles
+		pulx
+       		rts
 
 MSG:   		FCC     "Time:    :  :  "
 ASCIIbuff:	equ	#MSG+15	 	; Gets us to the desired "drop point"
