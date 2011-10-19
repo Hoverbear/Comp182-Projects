@@ -23,9 +23,9 @@ wrt_pulse:	rmb	3		; Generates a write pulse to the LCD module
 *
 		org	$F000
 		jmp	start
-bcd:            fcb     0,0       	; Reserves 2 byte for bcd
-bcdlength:	equ	2		; length of bcd in bytes
-ASCIILength:    equ     4               ; Length of the ASCII output
+bcd:            fcb     0,0,0       	; Reserves 3 byte for bcd
+bcdlength:	equ	3		; length of bcd in bytes
+ASCIILength:    equ     6               ; Length of the ASCII output
 
 *
 * A simple 10 second delay for general use.
@@ -45,21 +45,13 @@ start:		lds	#STACK
    		jsr	delay_10ms	; Delay 20ms during power up
     		jsr	delay_10ms
 		ldx	#REGBLK
-		ldaa	#2
-		staa	ddrd,x		; PD0=input, PD1=output
-		clr	portd,x		; Make PD1=0 to xmit IR light
     		jsr	lcd_ini		; Initialize the LCD
 *
 * The main program loop.
 *
-back:		ldaa	portd+$1000
-		rora			; Rotate PD0 into carry bit
-		bcs	no_IR_light     ; Branch if carry set
-		ldx    	#MSG2		; MSG2 for line1, x points to MSG2
-        	ldab    #16             ; Send out 16 characters
-     		jsr	lcd_line1	; Print MSG2 to LCD line 1
+back:		
 * Do BCD Increment.
-     		ldab    #bcdlength       ; Loads the B register with 4
+     		ldab    #bcdlength      ; Loads the B register with 4
 		ldx	#bcd		; Sets to bcd for subroutine
 		jsr     BCDinc		; Increment the BCD by one and adjust as needed.
 * Do ACSII display.
@@ -68,7 +60,7 @@ back:		ldaa	portd+$1000
 		ldab	#ASCIILength	; Loading the number of BCD digits there are.
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
 * Write out to the display.
-     		ldx    	#MSG3		; MSG3 for line2, x points to MSG3
+     		ldx    	#MSG		; MSG3 for line2, x points to MSG3
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
      		jsr     delay_10ms	; Take a short break!
@@ -101,6 +93,7 @@ ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		STAA	0,x		; Writing bcd bytes.
 		DEY			; Changing BCD byte.
 		DEX			; Mark completed display buffer digit.
+		DEX			; Since we've done 2 digits we skip one for the ":"
 		DECB			; Mark completed BCD pair, move to next byte.
 		BNE	ASCIILoop	; If B is not zero, return to begining of loop.
 *
@@ -109,16 +102,6 @@ ASCIIEnd:       pulb
 		puly
 		pulx
 		rts			; Return to subroutine.
-
-* Provided call.
-no_IR_light:
-		ldx    	#MSG1		; MSG1 for line1, x points to MSG1
-       		ldab    #16             ; send out 16 characters
-    		jsr	lcd_line1	; Write to display buffer.
-    		jsr     BCDClear        ; Clear the BCD
-     		jsr	delay_10ms	; Take a break, twice!
-     		jsr	delay_10ms
-     		jmp	back
 
 * Inputs:
 *		x = BCDbuffer address,
@@ -132,7 +115,9 @@ BCDinc:		psha			; Push and go.
 *
 BCDloop:	ldaa	0,x		; Load the byte (2 digits) so we can work with it.
 		ADDA	#1		; Increment the byte.
-		daa			; Allow the proc to adjust for us to get a proper BCD.
+		daa			; Allow the proc to adjust for us to get a proper BCD.		
+
+
 		staa	0,x		; Restore the byte to it's location.
 		bcc	BCDfinish	; C=0? We're done, step to finished.
 *					; C=1? We need to move across more digits.
@@ -158,10 +143,8 @@ BCDClear:       PSHX
 		PULX
 		RTS                     ; Returning home
 
-MSG1:   	FCC     "NO OBJECT NEARBY"
-MSG2:   	FCC     "OBJECT DETECTED "
-MSG3:   	FCC     "Count:          "
-ASCIIbuff:	equ	#MSG3+15 ; Gets us to the desired "drop point"
+MSG:   		FCC     "Time:    :  :  "
+ASCIIbuff:	equ	#MSG+15	 	; Gets us to the desired "drop point"
        		org	$FFFE
      		fdb	start
        		end
