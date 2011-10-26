@@ -30,9 +30,9 @@ unitLength:	equ	2		; length of bcd in bytes
 ASCIILength:    equ     6               ; Length of the ASCII output
 
 
-*
-* Starts up the program.
-*
+****************************************
+* START
+****************************************
 start:		lds	#STACK
    		jsr	delay_10ms	; Delay 20ms during power up
     		jsr	delay_10ms
@@ -43,6 +43,23 @@ start:		lds	#STACK
 *
 back:	
 
+
+* Do ACSII display.
+		ldx     #ASCIIbuff	; Loading position of MSG3 where numerical digits display.
+		ldy     #bcd            ; Loading the bcd buffer.
+		ldab	#ASCIILength	; Loading the number of BCD digits there are.
+		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
+* Write out to the display.
+     		ldx    	#MSG		; MSG3 for line2, x points to MSG3
+        	ldab    #16             ; Send out 16 characters
+     		jsr	lcd_line2	; Print MSG3 to LCD line 2
+     		jsr     delay_10ms	; Take a short break!
+     		jsr     delay_10ms	; Take a short break!
+     		jmp	back		; Reloop.
+
+****************************************
+* TIMER
+****************************************
 * Do seconds increment.
 secondINC: 	ldab    #unitLength     ; Loads the B register with the unit length (2)
 		ldx	#secondsBCD	; Sets to secondsBCD for subroutine
@@ -65,21 +82,15 @@ minuteINC:	ldaa	#00		; Load A with 0
 hourINC:	ldab	#unitLength	; In case it got overwritten somehow. Safety first!
 		ldx	#hourBCD	; Sets to minutesBCD for our subroutine.
 		jsr	BCDinc		; Increment the seconds by one and adjust as needed
-					; TODO: Check for #$24, clear BCD if so.
+		ldaa	hourBCD		; Load A with the value of the BCD.
+		cmpa	#$24		; Compare it to the max of 24.
+		; TODO: Timer Reset Code
+		
 
-* Do ACSII display.
-		ldx     #ASCIIbuff	; Loading position of MSG3 where numerical digits display.
-		ldy     #bcd            ; Loading the bcd buffer.
-		ldab	#ASCIILength	; Loading the number of BCD digits there are.
-		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
-* Write out to the display.
-     		ldx    	#MSG		; MSG3 for line2, x points to MSG3
-        	ldab    #16             ; Send out 16 characters
-     		jsr	lcd_line2	; Print MSG3 to LCD line 2
-     		jsr     delay_10ms	; Take a short break!
-     		jsr     delay_10ms	; Take a short break!
-     		jmp	back		; Reloop.
 
+****************************************
+* ASCII
+****************************************
 * Inputs:
 *		x = message to append to,
 *		y = the bcd buffer,
@@ -116,6 +127,9 @@ ASCIIEnd:       pulb
 		pulx
 		rts			; Return to subroutine.
 
+****************************************
+* BCD
+****************************************
 * Inputs:
 *		x = BCDbuffer address,
 *		b = Length in bytes of BCDBuff
@@ -154,6 +168,9 @@ BCDClear:       PSHX
 		PULX
 		RTS                     ; Returning home
 
+****************************************
+* DELAY
+****************************************
 *
 * A simple 10 second delay for general use.
 *
@@ -166,6 +183,9 @@ del1:		dex			; 3 cycles, decrement register x
 		pulx
        		rts
 
+****************************************
+* Message
+****************************************
 MSG:   		FCC     "Time:    :  :  "
 ASCIIbuff:	equ	#MSG+15	 	; Gets us to the desired "drop point"
        		org	$FFFE
