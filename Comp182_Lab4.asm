@@ -3,6 +3,19 @@
 portd:		equ	8
 ddrd:		equ	9
 REGBLK:		equ	$1000
+PORTA	equ	$00			; offset of PORTA from REGBAS
+PORTB   equ     $04   			; offset of PORTB from REGBAS
+TOC2	equ	$18			; offset of TOC2 from REGBAS
+TCNT	equ	$0E			; offset of TCNT from REGBAS
+TCTL1	equ	$20			; offset of TCTL1 from REGBAS
+TFLG1	equ	$23			; offset of TFLG1 from REGBAS
+TMSK1	equ	$22			; offset of TMSK1 from REGBAS
+hitime	equ	250			; value to set high time to 250 us
+lotime	equ	750			; value to set low time to 250 us
+toggle	equ	$40			; value to select the toggle action
+OC2	equ	$40			; value to select OC2 pin and OC2F flag
+clear	equ	$40			; value to clear OC2F flag
+sethigh	equ	$40			; value to set OC2 pin to high
 TEN_MS:		equ	2500		; 2500 x 8 cycles = 20,000 cycles = 10ms
 *
 STACK:		equ	$FF
@@ -20,6 +33,8 @@ sel_inst:	rmb	3		; Selects instruction before writing LCD module
 sel_data:	rmb	3		; Selects data before writing the LCD module
 wrt_pulse:	rmb	3		; Generates a write pulse to the LCD module
 *
+		ORG	$FFE6	     	; set up the OC2 interrupt vector
+		FDB	oc2_ISR
 *
 		org	$F000
 		jmp	start
@@ -28,6 +43,7 @@ minutesBCD:	fcb	0		; Reserves 1 byte for minutes.
 hoursBCD	fcb	0		; Reserves 1 byte for hours.
 unitLength:	equ	2		; length of bcd in bytes
 ASCIILength:    equ     6               ; Length of the ASCII output
+hlflag		rmb	1		; A flag to indicate OC2 action. Set high or low
 
 
 ****************************************
@@ -38,12 +54,28 @@ start:		lds	#STACK
     		jsr	delay_10ms
 		ldx	#REGBLK
     		jsr	lcd_ini		; Initialize the LCD
-*
+		
+		BSET	PORTA,X OC2 	; set OC2 pin to high  (PA6)
+		LDAA	#1
+		STAA	hlflag	    	; initialize the flag to 1
+		LDAA	#clear
+		STAA	TFLG1,X	    	; clear the OC2F flag
+		LDAA	#toggle	    	; select the OC2 action to be toggle
+		STAA	TCTL1,X
+
+		LDD	TCNT,X	    	; start an OC2 compare. delay = 150 us
+		ADDD	#hitime
+		STD	TOC2,X
+
+		BSET	TMSK1,X OC2 	; nable the OC2 interrupt
+		CLI	             	; enable interrupts
+
+wait	BRA	*	    		; stay in an infinite loop
+
+****************************************
 * The main program loop.
-*
+****************************************
 back:	
-
-
 * Do ACSII display.
 		ldx     #ASCIIbuff	; Loading position of MSG3 where numerical digits display.
 		ldy     #bcd            ; Loading the bcd buffer.
@@ -108,7 +140,7 @@ ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		ADDA	#$30		; Convert to ASCII.
 		STAA	0,x		; Store within first digit of display buffer.
 		LDAA	0,y		; Reload the BCD byte so we can pull the second digit of the byte.
-		LSRA			; Logical Shifting so we can access the last 4 bytes and form a byte.		; 1st
+		LSRA			; Logical Shifting so we can access the last 4 bytes and form a byte.	; 1st
 		LSRA			; 									; 2nd
 		LSRA			; 									; 3rd
 		LSRA			; 									; 4th
