@@ -3,19 +3,19 @@
 portd:		equ	8
 ddrd:		equ	9
 REGBLK:		equ	$1000
-PORTA	equ	$00			; offset of PORTA from REGBAS
-PORTB   equ     $04   			; offset of PORTB from REGBAS
-TOC2	equ	$18			; offset of TOC2 from REGBAS
-TCNT	equ	$0E			; offset of TCNT from REGBAS
-TCTL1	equ	$20			; offset of TCTL1 from REGBAS
-TFLG1	equ	$23			; offset of TFLG1 from REGBAS
-TMSK1	equ	$22			; offset of TMSK1 from REGBAS
-hitime	equ	250			; value to set high time to 250 us
-lotime	equ	750			; value to set low time to 250 us
-toggle	equ	$40			; value to select the toggle action
-OC2	equ	$40			; value to select OC2 pin and OC2F flag
-clear	equ	$40			; value to clear OC2F flag
-sethigh	equ	$40			; value to set OC2 pin to high
+PORTA		equ	$00		; offset of PORTA from REGBAS
+PORTB   	equ     $04   		; offset of PORTB from REGBAS
+TOC2		equ	$18		; offset of TOC2 from REGBAS
+TCNT		equ	$0E		; offset of TCNT from REGBAS
+TCTL1		equ	$20		; offset of TCTL1 from REGBAS
+TFLG1		equ	$23		; offset of TFLG1 from REGBAS
+TMSK1		equ	$22		; offset of TMSK1 from REGBAS
+hitime		equ	250		; value to set high time to 250 us
+lotime		equ	750		; value to set low time to 250 us
+toggle		equ	$40		; value to select the toggle action
+OC2		equ	$40		; value to select OC2 pin and OC2F flag
+clear		equ	$40		; value to clear OC2F flag
+sethigh		equ	$40		; value to set OC2 pin to high
 TEN_MS:		equ	2500		; 2500 x 8 cycles = 20,000 cycles = 10ms
 *
 STACK:		equ	$FF
@@ -38,12 +38,14 @@ wrt_pulse:	rmb	3		; Generates a write pulse to the LCD module
 *
 		org	$F000
 		jmp	start
-secondsBCD:     fcb     0      		; Reserves 1 byte for seconds.
-minutesBCD:	fcb	0		; Reserves 1 byte for minutes.
-hoursBCD	fcb	0		; Reserves 1 byte for hours.
-unitLength:	equ	2		; length of bcd in bytes
+secondBCD:	fcb     #0      	; Reserves 1 byte for seconds.
+minuteBCD:	fcb	#0		; Reserves 1 byte for minutes.
+hourBCD:	fcb	#0		; Reserves 1 byte for hours.
+unitLength:	equ	1		; length of bcd in bytes
 ASCIILength:    equ     6               ; Length of the ASCII output
-hlflag		rmb	1		; A flag to indicate OC2 action. Set high or low
+interuptCount:  fcb     #0              ; We're looking for 100 of these to make a second if the interupt is every 20 ms.
+interuptGap:    equ     20000           ; Two bytes for the Timer compare gap
+
 
 
 ****************************************
@@ -54,32 +56,41 @@ start:		lds	#STACK
     		jsr	delay_10ms
 		ldx	#REGBLK
     		jsr	lcd_ini		; Initialize the LCD
-		
+
 		BSET	PORTA,X OC2 	; set OC2 pin to high  (PA6)
-		LDAA	#1
-		STAA	hlflag	    	; initialize the flag to 1
 		LDAA	#clear
 		STAA	TFLG1,X	    	; clear the OC2F flag
-		LDAA	#toggle	    	; select the OC2 action to be toggle
+		LDAA	#toggle	     	; select the OC2 action to be toggle
 		STAA	TCTL1,X
 
-		LDD	TCNT,X	    	; start an OC2 compare. delay = 150 us
-		ADDD	#hitime
+		LDD	TCNT,X	    	; Start an OC2 compare.
+		ADDD	#interuptGap
 		STD	TOC2,X
 
-		BSET	TMSK1,X OC2 	; nable the OC2 interrupt
-		CLI	             	; enable interrupts
-
-wait	BRA	*	    		; stay in an infinite loop
+		BSET	TMSK1,X OC2 	; Enable the OC2 interrupt
+		CLI	             	; Enable interrupts
 
 ****************************************
 * The main program loop.
 ****************************************
-back:	
-* Do ACSII display.
-		ldx     #ASCIIbuff	; Loading position of MSG3 where numerical digits display.
-		ldy     #bcd            ; Loading the bcd buffer.
-		ldab	#ASCIILength	; Loading the number of BCD digits there are.
+back:
+		ldaa    interuptCount
+		cmpa    #100
+		beq     secondINC
+* Do seconds ACSII display.
+		ldx     #SecondLCD	; Loading position of MSG3 where numerical digits display.
+		ldy     #secondBCD      ; Loading the seconds buffer.
+		ldab	#unitLength	; Loading the number of BCD digits there are.
+		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
+* Do Minutes ACSII display.
+		ldx     #MinuteLCD	; Loading position of MSG3 where numerical digits display.
+		ldy     #hourBCD      ; Loading the seconds buffer.
+		ldab	#unitLength	; Loading the number of BCD digits there are.
+		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
+* Do Hours ACSII display.
+		ldx     #HourLCD	; Loading position of MSG3 where numerical digits display.
+		ldy     #hourBCD      ; Loading the seconds buffer.
+		ldab	#unitLength	; Loading the number of BCD digits there are.
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
 * Write out to the display.
      		ldx    	#MSG		; MSG3 for line2, x points to MSG3
@@ -94,21 +105,23 @@ back:
 ****************************************
 * Do seconds increment.
 secondINC: 	ldab    #unitLength     ; Loads the B register with the unit length (2)
-		ldx	#secondsBCD	; Sets to secondsBCD for subroutine
+		ldx	#secondBCD	; Sets to secondsBCD for subroutine
 		jsr     BCDinc		; Increment the seconds by one and adjust as needed.
-		ldaa	secondsBCD	; Load A with the *value* of the BCD.
+		ldaa	secondBCD	; Load A with the *value* of the BCD.
 		cmpa	#$60		; Compare A to 60, checking to see if we need to inc minute.
 		beq	minuteINC	; Increment the minute if needed.
+		rts
 
 * Do minutes increment, happens if secondsBCD = $60.
 minuteINC:	ldaa	#00		; Load A with 0
-		staa	secondsBCD	; Store 0 into the secondsBCD, resetting it.
+		staa	secondBCD	; Store 0 into the secondsBCD, resetting it.
 		ldab	#unitLength	; In case it got overwritten somehow. Safety first!
-		ldx	#minutesBCD	; Sets to minutesBCD for our subroutine.
+		ldx	#minuteBCD	; Sets to minutesBCD for our subroutine.
 		jsr	BCDinc		; Increment the seconds by one and adjust as needed
 		ldaa	minuteBCD	; Load A with the *value* of the BCD.
 		cmpa	#$60		; Compare A to 60, checking to see if we need to inc hour.
 		beq	hourINC		; Increment the hour if needed.
+		rts
 
 * Do hour increment, happens if minutesBCD = $60.
 hourINC:	ldab	#unitLength	; In case it got overwritten somehow. Safety first!
@@ -116,8 +129,9 @@ hourINC:	ldab	#unitLength	; In case it got overwritten somehow. Safety first!
 		jsr	BCDinc		; Increment the seconds by one and adjust as needed
 		ldaa	hourBCD		; Load A with the value of the BCD.
 		cmpa	#$24		; Compare it to the max of 24.
+		rts
 		; TODO: Timer Reset Code
-		
+
 
 
 ****************************************
@@ -132,7 +146,7 @@ ASCIIInsert:	pshx			; Pushing all buffers for safety concerns.
 		pshy
 		psha
 		pshb
-		ldab    #bcdlength      ; Load the BCD
+;		ldab    #bcdlength      ; Load the BCD
 		iny                     ; Get to the right byte.
 *
 ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
@@ -193,7 +207,7 @@ BCDfinish:	pulb
 * No inputs.
 *
 BCDClear:       PSHX
-		LDX     #bcd            ; Loading the place of the BCD into X register
+;		LDX     #bcd            ; Loading the place of the BCD into X register
 		bclr    0,x     $FF     ; Clearing all the bits in the largest pair of BCD numbers
 		inx                     ; Incrementing X so we can get to the next pair
 		BCLR    0,x     $FF     ; Clearing the smallest pair of BCDs
@@ -218,9 +232,25 @@ del1:		dex			; 3 cycles, decrement register x
 ****************************************
 * Message
 ****************************************
-MSG:   		FCC     "Time:    :  :  "
-ASCIIbuff:	equ	#MSG+15	 	; Gets us to the desired "drop point"
+MSG:   		FCC     "Time:     :  :  "
+MSGclear:       FCC     "                "
+SecondLCD:	equ	#MSG+15	 	; Gets us to the desired "drop point"
+MinuteLCD:      equ	#MSG+12	 	; Gets us to the desired "drop point"
+HourLCD:        equ	#MSG+9	 	; Gets us to the desired "drop point"
        		org	$FFFE
      		fdb	start
+     		
+****************************************
+* Interupt
+****************************************
+oc2_ISR	LDAA	#clear		; clear the OC2F flag
+	STAA	TFLG1,X	        ;
+	LDD	TOC2,X	        ; pull OC2 pin to high 700 E clock cycles later
+	ADDD	#interuptGap	;
+	STD	TOC2,X	        ;
+	ldaa    interuptCount
+	inca
+	staa    interuptCount
+exit	RTI
        		end
 
