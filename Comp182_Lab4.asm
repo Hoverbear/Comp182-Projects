@@ -98,7 +98,7 @@ back:
 * Write out to the display.
      		ldx    	#MSG		; MSG3 for line2, x points to MSG3
 break2:        	ldab    #16             ; Send out 16 characters
-;     		jsr	lcd_line2	; Print MSG3 to LCD line 2
+     		jsr	lcd_line2	; Print MSG3 to LCD line 2
      		;jsr     delay_10ms	; Take a short break!
      		;jsr     delay_10ms	; Take a short break!
 break:    		jmp	back		; Reloop.
@@ -245,7 +245,8 @@ HourLCD:        equ	#MSG+9	 	; Gets us to the desired "drop point"
 ****************************************
 * Interupt
 ****************************************
-oc2_ISR		LDAA	#clear		; clear the OC2F flag
+oc2_ISR         LDX     #REGBLK
+		LDAA	#clear		; clear the OC2F flag
 		STAA	TFLG1,X	        ;
 		LDD	TOC2,X	        ; pull OC2 pin to high 700 E clock cycles later
 		ADDD	#interuptGap	;
