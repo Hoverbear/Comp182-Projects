@@ -54,20 +54,23 @@ interuptGap:    equ     20000           ; Two bytes for the Timer compare gap
 start:		lds	#STACK
    		jsr	delay_10ms	; Delay 20ms during power up
     		jsr	delay_10ms
-		ldx	#REGBLK
     		jsr	lcd_ini		; Initialize the LCD
+		ldx	#REGBLK
 
-		BSET	PORTA,X OC2 	; set OC2 pin to high  (PA6)
+		BSET	PORTA,x OC2 	; set OC2 pin to high  (PA6)
 		LDAA	#clear
-		STAA	TFLG1,X	    	; clear the OC2F flag
+		STAA	TFLG1,x	    	; clear the OC2F flag
 		LDAA	#toggle	     	; select the OC2 action to be toggle
-		STAA	TCTL1,X
+		STAA	TCTL1,x
 
-		LDD	TCNT,X	    	; Start an OC2 compare.
+		LDD	TCNT,x	    	; Start an OC2 compare.
 		ADDD	#interuptGap
-		STD	TOC2,X
+		STD	TOC2,x
 
-		BSET	TMSK1,X OC2 	; Enable the OC2 interrupt
+		ldaa    #%01000000
+		staa    TMSK1,x         ; Enable the OC2 interrupt
+		ldd     #oc2_ISR
+		std     OC2,x
 		CLI	             	; Enable interrupts
 
 ****************************************
@@ -75,7 +78,7 @@ start:		lds	#STACK
 ****************************************
 back:
 		ldaa    interuptCount
-		cmpa    #100
+		cmpa    #$64
 		beq     secondINC
 * Do seconds ACSII display.
 		ldx     #SecondLCD	; Loading position of MSG3 where numerical digits display.
@@ -94,11 +97,11 @@ back:
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
 * Write out to the display.
      		ldx    	#MSG		; MSG3 for line2, x points to MSG3
-        	ldab    #16             ; Send out 16 characters
-     		jsr	lcd_line2	; Print MSG3 to LCD line 2
-     		jsr     delay_10ms	; Take a short break!
-     		jsr     delay_10ms	; Take a short break!
-     		jmp	back		; Reloop.
+break2:        	ldab    #16             ; Send out 16 characters
+;     		jsr	lcd_line2	; Print MSG3 to LCD line 2
+     		;jsr     delay_10ms	; Take a short break!
+     		;jsr     delay_10ms	; Take a short break!
+break:    		jmp	back		; Reloop.
 
 ****************************************
 * TIMER
@@ -233,24 +236,23 @@ del1:		dex			; 3 cycles, decrement register x
 * Message
 ****************************************
 MSG:   		FCC     "Time:     :  :  "
-MSGclear:       FCC     "                "
 SecondLCD:	equ	#MSG+15	 	; Gets us to the desired "drop point"
 MinuteLCD:      equ	#MSG+12	 	; Gets us to the desired "drop point"
 HourLCD:        equ	#MSG+9	 	; Gets us to the desired "drop point"
-       		org	$FFFE
-     		fdb	start
-     		
+       		;org	$FFFE
+     		;fdb	start
+
 ****************************************
 * Interupt
 ****************************************
-oc2_ISR	LDAA	#clear		; clear the OC2F flag
-	STAA	TFLG1,X	        ;
-	LDD	TOC2,X	        ; pull OC2 pin to high 700 E clock cycles later
-	ADDD	#interuptGap	;
-	STD	TOC2,X	        ;
-	ldaa    interuptCount
-	inca
-	staa    interuptCount
-exit	RTI
+oc2_ISR		LDAA	#clear		; clear the OC2F flag
+		STAA	TFLG1,X	        ;
+		LDD	TOC2,X	        ; pull OC2 pin to high 700 E clock cycles later
+		ADDD	#interuptGap	;
+		STD	TOC2,X	        ;
+		ldaa    interuptCount
+		inca
+		staa    interuptCount
+exit		RTI
        		end
 
