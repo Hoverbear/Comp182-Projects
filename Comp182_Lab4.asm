@@ -78,7 +78,7 @@ start:		lds	#STACK
 ****************************************
 back:
 		ldaa    interuptCount
-		cmpa    #$64
+break:		cmpa    #$64
 		beq     secondINC
 * Do seconds ACSII display.
 		ldx     #SecondLCD	; Loading position of MSG3 where numerical digits display.
@@ -87,7 +87,7 @@ back:
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
 * Do Minutes ACSII display.
 		ldx     #MinuteLCD	; Loading position of MSG3 where numerical digits display.
-		ldy     #hourBCD      ; Loading the seconds buffer.
+		ldy     #minuteBCD      ; Loading the seconds buffer.
 		ldab	#unitLength	; Loading the number of BCD digits there are.
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
 * Do Hours ACSII display.
@@ -97,17 +97,20 @@ back:
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
 * Write out to the display.
      		ldx    	#MSG		; MSG3 for line2, x points to MSG3
-break2:        	ldab    #16             ; Send out 16 characters
+        	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
-     		;jsr     delay_10ms	; Take a short break!
-     		;jsr     delay_10ms	; Take a short break!
-break:    		jmp	back		; Reloop.
+     		jsr     delay_10ms	; Take a short break!
+     		jsr     delay_10ms	; Take a short break!
+    		jmp	back		; Reloop.
 
 ****************************************
 * TIMER
 ****************************************
 * Do seconds increment.
 secondINC: 	ldab    #unitLength     ; Loads the B register with the unit length (2)
+		;ldaa    #0
+		;staa    interuptCount
+
 		ldx	#secondBCD	; Sets to secondsBCD for subroutine
 		jsr     BCDinc		; Increment the seconds by one and adjust as needed.
 		ldaa	secondBCD	; Load A with the *value* of the BCD.
@@ -149,8 +152,8 @@ ASCIIInsert:	pshx			; Pushing all buffers for safety concerns.
 		pshy
 		psha
 		pshb
-;		ldab    #bcdlength      ; Load the BCD
-		iny                     ; Get to the right byte.
+		ldab    #2      	; Load the BCD
+		;iny                     ; Get to the right byte.
 *
 ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		ANDA	#%00001111	; Remove second digit within the bye.
