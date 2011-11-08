@@ -1,5 +1,14 @@
+****************************************
+* LAB4
+*
+*       NOTE: To achieve proper time scaling,
+*               please set portc (The switches)
+*               to 00101110 (Or, 74 in a dump of 1003)
+*
+****************************************
 *      Modified by: Andrew Hobden, Patrick Brus
 *
+portc:          equ     $1003
 portd:		equ	8
 ddrd:		equ	9
 REGBLK:		equ	$1000
@@ -44,7 +53,7 @@ hourBCD:	fcb	#0		; Reserves 1 byte for hours.
 unitLength:	equ	1		; length of bcd in bytes
 ASCIILength:    equ     6               ; Length of the ASCII output
 interuptCount:  fcb     #0              ; We're looking for 100 of these to make a second if the interupt is every 20 ms.
-interuptGap:    equ     20000           ; Two bytes for the Timer compare gap
+interuptGap:    equ     20000           ; We want 20,000 for one second
 
 
 
@@ -78,7 +87,7 @@ start:		lds	#STACK
 ****************************************
 back:
 		ldaa    interuptCount
-		cmpa    #$64
+		cmpa    portc            ; The switches
 		bne     display
 		jsr     timerINC
 * Do seconds ACSII display.
@@ -134,7 +143,9 @@ minuteINC:	ldaa	#00		; Load A with 0
 		bra     timerDone
 
 * Do hour increment, happens if minutesBCD = $60.
-hourINC:	ldab	#unitLength	; In case it got overwritten somehow. Safety first!
+hourINC:        ldaa    #00
+		staa    minuteBCD
+		ldab	#unitLength	; In case it got overwritten somehow. Safety first!
 		ldx	#hourBCD	; Sets to minutesBCD for our subroutine.
 		jsr	BCDinc		; Increment the seconds by one and adjust as needed
 		ldaa	hourBCD		; Load A with the value of the BCD.
@@ -267,8 +278,8 @@ HourLCD:        equ	#MSG+9	 	; Gets us to the desired "drop point"
 oc2_ISR         LDX     #REGBLK
 		LDAA	#clear		; clear the OC2F flag
 		STAA	TFLG1,X	        ;
-		LDD	TOC2,X	        ; pull OC2 pin to high 700 E clock cycles later
-		ADDD	#interuptGap	;
+		LDD	#interuptGap	;
+		ADDD	TOC2,X	        ; pull OC2 pin to high 700 E clock cycles later
 		STD	TOC2,X	        ;
 		ldaa    interuptCount
 		inca
