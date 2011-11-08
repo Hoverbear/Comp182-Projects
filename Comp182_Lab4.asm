@@ -57,7 +57,7 @@ start:		lds	#STACK
     		jsr	lcd_ini		; Initialize the LCD
 		ldx	#REGBLK
 
-		BSET	PORTA,x OC2 	; set OC2 pin to high  (PA6)
+break:		BSET	PORTA,x OC2 	; set OC2 pin to high  (PA6)
 		LDAA	#clear
 		STAA	TFLG1,x	    	; clear the OC2F flag
 		LDAA	#toggle	     	; select the OC2 action to be toggle
@@ -78,10 +78,11 @@ start:		lds	#STACK
 ****************************************
 back:
 		ldaa    interuptCount
-break:		cmpa    #$64
-		beq     secondINC
+		cmpa    #$64
+		bne     display
+		jsr     timerINC
 * Do seconds ACSII display.
-		ldx     #SecondLCD	; Loading position of MSG3 where numerical digits display.
+display:	ldx     #SecondLCD	; Loading position of MSG3 where numerical digits display.
 		ldy     #secondBCD      ; Loading the seconds buffer.
 		ldab	#unitLength	; Loading the number of BCD digits there are.
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
@@ -99,24 +100,27 @@ break:		cmpa    #$64
      		ldx    	#MSG		; MSG3 for line2, x points to MSG3
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
-     		jsr     delay_10ms	; Take a short break!
-     		jsr     delay_10ms	; Take a short break!
+     		;jsr     delay_10ms	; Take a short break!
+     		;jsr     delay_10ms	; Take a short break!
     		jmp	back		; Reloop.
 
 ****************************************
 * TIMER
 ****************************************
+timerINC:       psha
+		pshb
+		pshx
+		pshy
 * Do seconds increment.
 secondINC: 	ldab    #unitLength     ; Loads the B register with the unit length (2)
-		;ldaa    #0
-		;staa    interuptCount
-
+		ldaa    #0
+		staa    interuptCount
 		ldx	#secondBCD	; Sets to secondsBCD for subroutine
 		jsr     BCDinc		; Increment the seconds by one and adjust as needed.
 		ldaa	secondBCD	; Load A with the *value* of the BCD.
 		cmpa	#$60		; Compare A to 60, checking to see if we need to inc minute.
 		beq	minuteINC	; Increment the minute if needed.
-		rts
+		bra     timerDone
 
 * Do minutes increment, happens if secondsBCD = $60.
 minuteINC:	ldaa	#00		; Load A with 0
@@ -127,7 +131,7 @@ minuteINC:	ldaa	#00		; Load A with 0
 		ldaa	minuteBCD	; Load A with the *value* of the BCD.
 		cmpa	#$60		; Compare A to 60, checking to see if we need to inc hour.
 		beq	hourINC		; Increment the hour if needed.
-		rts
+		bra     timerDone
 
 * Do hour increment, happens if minutesBCD = $60.
 hourINC:	ldab	#unitLength	; In case it got overwritten somehow. Safety first!
@@ -135,8 +139,20 @@ hourINC:	ldab	#unitLength	; In case it got overwritten somehow. Safety first!
 		jsr	BCDinc		; Increment the seconds by one and adjust as needed
 		ldaa	hourBCD		; Load A with the value of the BCD.
 		cmpa	#$24		; Compare it to the max of 24.
+		beq     timerReset
+		bra     timerDone
+* Reset the timer
+timerReset:     ldaa    #0
+		staa    secondBCD
+		staa    minuteBCD
+		staa    hourBCD
+		bra     timerDone
+*The timer is done, return
+timerDone:      puly
+		pulx
+		pulb
+		pula
 		rts
-		; TODO: Timer Reset Code
 
 
 
@@ -190,7 +206,7 @@ BCDinc:		psha			; Push and go.
 		pshx
 		pshb
 		abx			; Add the BCDBuff length to the address (End of smallest digit.)
-		dex			; Get to the BCDbuff location we want (Right before last byte/digit-pair)
+		;dex			; Get to the BCDbuff location we want (Right before last byte/digit-pair)
 *
 BCDloop:	ldaa	0,x		; Load the byte (2 digits) so we can work with it.
 		ADDA	#1		; Increment the byte.
