@@ -168,7 +168,7 @@ ASCIIInsert:	pshx			; Pushing all buffers for safety concerns.
 		pshy
 		psha
 		pshb
-		ldab    #2      	; Load the BCD
+		;ldab    #2      	; Load the BCD
 		;iny                     ; Get to the right byte.
 *
 ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
@@ -185,7 +185,7 @@ ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		STAA	0,x		; Writing bcd bytes.
 		DEY			; Changing BCD byte.
 		DEX			; Mark completed display buffer digit.
-		DEX			; Since we've done 2 digits we skip one for the ":"
+		;DEX			; Since we've done 2 digits we skip one for the ":"
 		DECB			; Mark completed BCD pair, move to next byte.
 		BNE	ASCIILoop	; If B is not zero, return to begining of loop.
 *
