@@ -56,8 +56,8 @@ start:		lds	#STACK
     		jsr	delay_10ms
     		jsr	lcd_ini		; Initialize the LCD
 		ldx	#REGBLK
-
-break:		BSET	PORTA,x OC2 	; set OC2 pin to high  (PA6)
+*
+		BSET	PORTA,x OC2 	; set OC2 pin to high  (PA6)
 		LDAA	#clear
 		STAA	TFLG1,x	    	; clear the OC2F flag
 		LDAA	#toggle	     	; select the OC2 action to be toggle
@@ -87,17 +87,17 @@ display:	ldx     #SecondLCD	; Loading position of MSG3 where numerical digits di
 		ldab	#unitLength	; Loading the number of BCD digits there are.
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
 * Do Minutes ACSII display.
-		ldx     #MinuteLCD	; Loading position of MSG3 where numerical digits display.
+break:		ldx     #MinuteLCD	; Loading position of MSG3 where numerical digits display.
 		ldy     #minuteBCD      ; Loading the seconds buffer.
 		ldab	#unitLength	; Loading the number of BCD digits there are.
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
 * Do Hours ACSII display.
-		ldx     #HourLCD	; Loading position of MSG3 where numerical digits display.
+break2:		ldx     #HourLCD	; Loading position of MSG3 where numerical digits display.
 		ldy     #hourBCD      ; Loading the seconds buffer.
 		ldab	#unitLength	; Loading the number of BCD digits there are.
 		jsr     ASCIIInsert	; Stepping through inserts of Digits onto the display buffer.
 * Write out to the display.
-     		ldx    	#MSG		; MSG3 for line2, x points to MSG3
+break3:     		ldx    	#MSG		; MSG3 for line2, x points to MSG3
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
      		;jsr     delay_10ms	; Take a short break!
@@ -205,7 +205,7 @@ ASCIIEnd:       pulb
 BCDinc:		psha			; Push and go.
 		pshx
 		pshb
-		abx			; Add the BCDBuff length to the address (End of smallest digit.)
+		;abx			; Add the BCDBuff length to the address (End of smallest digit.)
 		;dex			; Get to the BCDbuff location we want (Right before last byte/digit-pair)
 *
 BCDloop:	ldaa	0,x		; Load the byte (2 digits) so we can work with it.
