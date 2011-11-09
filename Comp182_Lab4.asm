@@ -109,8 +109,6 @@ break2:		ldx     #HourLCD	; Loading position of MSG3 where numerical digits disp
 break3:     		ldx    	#MSG		; MSG3 for line2, x points to MSG3
         	ldab    #16             ; Send out 16 characters
      		jsr	lcd_line2	; Print MSG3 to LCD line 2
-     		;jsr     delay_10ms	; Take a short break!
-     		;jsr     delay_10ms	; Take a short break!
     		jmp	back		; Reloop.
 
 ****************************************
@@ -179,8 +177,6 @@ ASCIIInsert:	pshx			; Pushing all buffers for safety concerns.
 		pshy
 		psha
 		pshb
-		;ldab    #2      	; Load the BCD
-		;iny                     ; Get to the right byte.
 *
 ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		ANDA	#%00001111	; Remove second digit within the bye.
@@ -196,7 +192,6 @@ ASCIILoop:	LDAA	0,y		; Loading BCD byte. (2 digits per byte)
 		STAA	0,x		; Writing bcd bytes.
 		DEY			; Changing BCD byte.
 		DEX			; Mark completed display buffer digit.
-		;DEX			; Since we've done 2 digits we skip one for the ":"
 		DECB			; Mark completed BCD pair, move to next byte.
 		BNE	ASCIILoop	; If B is not zero, return to begining of loop.
 *
@@ -216,8 +211,6 @@ ASCIIEnd:       pulb
 BCDinc:		psha			; Push and go.
 		pshx
 		pshb
-		;abx			; Add the BCDBuff length to the address (End of smallest digit.)
-		;dex			; Get to the BCDbuff location we want (Right before last byte/digit-pair)
 *
 BCDloop:	ldaa	0,x		; Load the byte (2 digits) so we can work with it.
 		ADDA	#1		; Increment the byte.
@@ -240,7 +233,6 @@ BCDfinish:	pulb
 * No inputs.
 *
 BCDClear:       PSHX
-;		LDX     #bcd            ; Loading the place of the BCD into X register
 		bclr    0,x     $FF     ; Clearing all the bits in the largest pair of BCD numbers
 		inx                     ; Incrementing X so we can get to the next pair
 		BCLR    0,x     $FF     ; Clearing the smallest pair of BCDs
