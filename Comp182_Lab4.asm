@@ -271,7 +271,7 @@ oc2_ISR         LDX     #REGBLK
 		LDAA	#clear		; clear the OC2F flag
 		STAA	TFLG1,X	        ;
 		LDD	#interuptGap	;
-		ADDD	TOC2,X	        ; pull OC2 pin to high 700 E clock cycles later
+		ADDD	TOC2,X	        ; pull OC2 pin to high after gap
 		STD	TOC2,X	        ;
 		ldaa    interuptCount
 		inca
