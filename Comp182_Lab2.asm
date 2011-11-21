@@ -38,8 +38,8 @@ return:	inca
 	jmp	back
 
 clearfour:
-	anda %00001111			; A dirty, dirty, terrible way to reset group 1.
-	jmp #return			; Go back to where we were.
+	anda	%00001111		; A dirty, dirty, terrible way to reset group 1.
+	jmp	#return			; Go back to where we were.
 	
 dostuff:
 	adda    #16			; Add 16, or increment the second group.
