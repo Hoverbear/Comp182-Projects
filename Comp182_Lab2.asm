@@ -29,7 +29,7 @@ start:
         ldaa    #0
 back:   staa    portb,x			; Set LEDs
 	bita    #%00001111		; Check if we have a value of 15
-	bne     #clearfour		; If so, reset that group to 0.
+	bne     #clearfour		; If so, reset that group to 0.  (This should probably be BEQ)
 return:	inca
 	bita    #%00000001		; Check if we need to tick the second group.
 	beq     #dostuff		; Tick the second group.
@@ -38,7 +38,7 @@ return:	inca
 	jmp	back
 
 clearfour:
-	anda	%00001111		; A dirty, dirty, terrible way to reset group 1.
+	anda	#%00001111		; A dirty, dirty, terrible way to reset group 1.
 	jmp	#return			; Go back to where we were.
 	
 dostuff:
