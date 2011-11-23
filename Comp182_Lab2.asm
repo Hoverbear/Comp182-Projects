@@ -27,9 +27,11 @@ s:
 start:
         ldx     #REGBLK
         ldaa    #0
+
 back:   staa    portb,x			; Set LEDs
 	bita    #%00001111		; Check if we have a value of 15
 	bne     #clearfour		; If so, reset that group to 0.  (This should probably be BEQ)
+
 return:	inca
 	bita    #%00000001		; Check if we need to tick the second group.
 	beq     #dostuff		; Tick the second group.
@@ -38,13 +40,14 @@ return:	inca
 	jmp	back
 
 clearfour:
-	anda	#%00001111		; A dirty, dirty, terrible way to reset group 1.
+;	anda	#%00001111		; A dirty, dirty, terrible way to reset group 1.
+	suba	#$0F			; Possibly a better way to get rid of the 1at group.
 	jmp	#return			; Go back to where we were.
 	
 dostuff:
-	adda    #16			; Add 16, or increment the second group.
+	adda    #$10			; Add 16, or increment the second group.
 	jmp     back
-*
+
 delay:	pshx
 	ldx	#SPEED			; delay n loops. delay = n * 10 cycles.
 dly:	dex					; 3 cycles
