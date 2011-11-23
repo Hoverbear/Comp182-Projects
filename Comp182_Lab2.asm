@@ -23,32 +23,35 @@ STACK:	equ	$FF
 * reserve some memory for global variables here
 
 
-s:
+
 start:
         ldx     #REGBLK
         ldaa    #0
+back:
+;-------------------------------------------------------------------------------
+tick1:	adda    #$01                    ; Add 1
 
-back:   staa    portb,x			; Set LEDs
-
-return:	inca
-	bita    #%00000001		; Check if we need to tick the second group.
-	beq     #secondtick		; Tick the second group.
-;	bita    #%00001111		; Check if we have a value of 15
-	bita	#$0F
-;	bne     #clearfour		; If so, reset that group to 0.
-	beq	#clearfour		; If we do, get rid of it and set it back to 0.
+check1:	bita	#$0F                    ; Check if we need to clear.
+	bne	#noclr1			; If we do, clear the least sig 4
+	suba    #$0F
+	
+noclr1: staa    portb,x			; Set LEDs
         jsr     delay
+        jsr     delay
+	
+tick2:	adda    #$01                    ; Add to first nibble (Why do we call it that?)
+	adda    #$10                    ; Add to the second.
+	
+check2: bita	#$0F                    ; Check if we need to clear.
+ 	bne	#noclr2			; If we do, get rid of it and set it back to 0.
+	suba    #$0F
+	
+noclr2: staa    portb,x			; Set LEDs
+	jsr     delay
         jsr     delay
 	jmp	back
 
-clearfour:
-;	anda	#%00001111		; A dirty, dirty, terrible way to reset group 1.
-	suba	#$0F			; Possibly a better way to get rid of the 1at group.
-	jmp	#return			; Go back to where we were.
-	
-secondtick:
-	adda    #$10			; Add 16, or increment the second group.
-	jmp     back
+;-------------------------------------------------------------------------------
 
 delay:	pshx
 	ldx	#SPEED			; delay n loops. delay = n * 10 cycles.
@@ -58,7 +61,7 @@ dly:	dex					; 3 cycles
 	bne	dly				; 3 cycles
 	pulx
 	rts
-	
+
 	org	$FFFE
 	fdb	start
 	end
