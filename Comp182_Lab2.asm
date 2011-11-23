@@ -29,12 +29,14 @@ start:
         ldaa    #0
 
 back:   staa    portb,x			; Set LEDs
-	bita    #%00001111		; Check if we have a value of 15
-	bne     #clearfour		; If so, reset that group to 0.  (This should probably be BEQ)
 
 return:	inca
 	bita    #%00000001		; Check if we need to tick the second group.
-	beq     #dostuff		; Tick the second group.
+	beq     #secondtick		; Tick the second group.
+;	bita    #%00001111		; Check if we have a value of 15
+	bita	#$0F
+;	bne     #clearfour		; If so, reset that group to 0.
+	beq	#clearfour		; If we do, get rid of it and set it back to 0.
         jsr     delay
         jsr     delay
 	jmp	back
@@ -44,7 +46,7 @@ clearfour:
 	suba	#$0F			; Possibly a better way to get rid of the 1at group.
 	jmp	#return			; Go back to where we were.
 	
-dostuff:
+secondtick:
 	adda    #$10			; Add 16, or increment the second group.
 	jmp     back
 
