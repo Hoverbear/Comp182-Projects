@@ -43,8 +43,6 @@ clearfour:
 	
 dostuff:
 	adda    #16			; Add 16, or increment the second group.
-	jsr     delay
-	jsr     delay
 	jmp     back
 *
 delay:	pshx
